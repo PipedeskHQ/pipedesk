@@ -1,0 +1,16 @@
+{
+  "name": "pipedesk",
+  "version": "1.0.0",
+  "description": "SaaS CRM for solo plumbers",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
