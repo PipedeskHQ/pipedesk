@@ -4,7 +4,8 @@
   "description": "SaaS CRM for solo plumbers",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "init-db": "node database/init.js"
   },
   "dependencies": {
     "express": "^4.18.2",
