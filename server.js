@@ -159,7 +159,7 @@ const PORT = process.env.PORT || 3000;
 
 initDatabase().then(() => {
   app.listen(PORT, () => {
-    console.log(`PipeDesk running on port ${PORT}`);
+    console.log(`PipeDesk v1.1 running on port ${PORT}`);
   });
 });
 
