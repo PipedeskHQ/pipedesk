@@ -128,6 +128,7 @@ async function initDatabase() {
   }
 }
 
+// Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -149,6 +150,10 @@ app.get('/db-test', async (req, res) => {
     res.json({ status: 'error', message: err.message });
   }
 });
+
+// Auth routes
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
 
 const PORT = process.env.PORT || 3000;
 
