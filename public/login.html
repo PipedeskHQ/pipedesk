@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log In — PipeDesk</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f5ff; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+.logo { font-size: 28px; font-weight: 800; color: #1a56db; margin-bottom: 8px; }
+.logo span { color: #1a1a1a; }
+.tagline { font-size: 14px; color: #64748b; margin-bottom: 32px; }
+.card { background: #fff; border-radius: 16px; padding: 36px 28px; width: 100%; max-width: 440px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.card h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.card p { font-size: 14px; color: #64748b; margin-bottom: 24px; }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+input { width: 100%; padding: 12px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 15px; color: #1a1a1a; outline: none; transition: border-color 0.2s; }
+input:focus { border-color: #1a56db; }
+.submit-btn { width: 100%; background: #1a56db; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.submit-btn:hover { background: #1648c0; }
+.submit-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+.error-msg { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; font-size: 14px; color: #dc2626; margin-bottom: 16px; display: none; }
+.divider { text-align: center; font-size: 14px; color: #94a3b8; margin: 16px 0; }
+.signup-link { text-align: center; font-size: 14px; color: #64748b; }
+.signup-link a { color: #1a56db; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="logo">Pipe<span>Desk</span></div>
+<div class="tagline">The CRM built for solo plumbers</div>
+
+<div class="card">
+  <h1>Welcome Back</h1>
+  <p>Log in to your PipeDesk account</p>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="form-group">
+    <label>Email Address</label>
+    <input type="email" id="email" placeholder="john@smithplumbing.com" required>
+  </div>
+
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="Your password" required>
+  </div>
+
+  <button class="submit-btn" id="submitBtn" onclick="handleLogin()">
+    Log In
+  </button>
+
+  <div class="divider">or</div>
+  <div class="signup-link">Don't have an account? <a href="/signup.html">Start free trial</a></div>
+</div>
+
+<script>
+// If already logged in, redirect to dashboard
+if (localStorage.getItem('pipedesk_token')) {
+  window.location.href = '/dashboard.html';
+}
+
+async function handleLogin() {
+  const btn = document.getElementById('submitBtn');
+  const errorMsg = document.getElementById('errorMsg');
+  errorMsg.style.display = 'none';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!email || !password) {
+    errorMsg.textContent = 'Please enter your email and password.';
+    errorMsg.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Logging in...';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      errorMsg.textContent = data.error;
+      errorMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Log In';
+      return;
+    }
+
+    localStorage.setItem('pipedesk_token', data.token);
+    localStorage.setItem('pipedesk_user', JSON.stringify(data.user));
+    window.location.href = '/dashboard.html';
+  } catch (err) {
+    errorMsg.textContent = 'Something went wrong. Please try again.';
+    errorMsg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Log In';
+  }
+}
+
+// Allow pressing Enter to submit
+document.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') handleLogin();
+});
+</script>
+</body>
+</html>
