@@ -2,11 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
+const fs = require('fs');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -37,7 +37,6 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW(),
         last_login_at TIMESTAMP
       );
-
       CREATE TABLE IF NOT EXISTS coupons (
         id SERIAL PRIMARY KEY,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -50,7 +49,6 @@ async function initDatabase() {
         expires_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
-
       CREATE TABLE IF NOT EXISTS customers (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -63,7 +61,6 @@ async function initDatabase() {
         last_job_date TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
-
       CREATE TABLE IF NOT EXISTS jobs (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -74,7 +71,6 @@ async function initDatabase() {
         status VARCHAR(50) DEFAULT 'scheduled',
         created_at TIMESTAMP DEFAULT NOW()
       );
-
       CREATE TABLE IF NOT EXISTS invoices (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -91,7 +87,6 @@ async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW(),
         paid_at TIMESTAMP
       );
-
       CREATE TABLE IF NOT EXISTS sms_log (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -103,11 +98,9 @@ async function initDatabase() {
         twilio_sid VARCHAR(255),
         created_at TIMESTAMP DEFAULT NOW()
       );
-
       INSERT INTO coupons (code, discount_percent, free_months, max_uses, is_active)
       VALUES ('BETA2026', 100, 3, 10, true)
       ON CONFLICT (code) DO NOTHING;
-
       INSERT INTO coupons (code, discount_percent, free_months, max_uses, is_single_use, is_active)
       VALUES
         ('PIPE001', 100, 3, 1, true, true),
@@ -128,18 +121,26 @@ async function initDatabase() {
   }
 }
 
-// Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+function sendFile(res, filename) {
+  const filepath = path.join(__dirname, 'public', filename);
+  if (fs.existsSync(filepath)) {
+    res.sendFile(filepath);
+  } else {
+    res.status(404).send(`
+      <h1>File not found: ${filename}</h1>
+      <p>Looking in: ${filepath}</p>
+      <p>Directory contents: ${fs.readdirSync(path.join(__dirname, 'public')).join(', ')}</p>
+    `);
+  }
+}
 
-app.get('/signup.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'signup.html'));
-});
-
-app.get('/login.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
+app.get('/', (req, res) => sendFile(res, 'index.html'));
+app.get('/signup.html', (req, res) => sendFile(res, 'signup.html'));
+app.get('/signup', (req, res) => sendFile(res, 'signup.html'));
+app.get('/login.html', (req, res) => sendFile(res, 'login.html'));
+app.get('/login', (req, res) => sendFile(res, 'login.html'));
+app.get('/dashboard.html', (req, res) => sendFile(res, 'dashboard.html'));
+app.get('/dashboard', (req, res) => sendFile(res, 'dashboard.html'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'PipeDesk is running' });
@@ -159,15 +160,26 @@ app.get('/db-test', async (req, res) => {
   }
 });
 
-// Auth routes
+app.get('/files', (req, res) => {
+  try {
+    const publicDir = path.join(__dirname, 'public');
+    const files = fs.readdirSync(publicDir);
+    res.json({ publicDir, files });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
+
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 
 initDatabase().then(() => {
   app.listen(PORT, () => {
-    console.log(`PipeDesk v1.1 running on port ${PORT}`);
+    console.log(`PipeDesk v1.2 running on port ${PORT}`);
   });
 });
 
