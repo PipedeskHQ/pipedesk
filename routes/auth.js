@@ -1,8 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../database/database/db');
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 // Validate coupon code
 router.post('/validate-coupon', async (req, res) => {
@@ -25,6 +31,7 @@ router.post('/validate-coupon', async (req, res) => {
       free_months: coupon.free_months
     });
   } catch (err) {
+    console.error('Coupon error:', err);
     res.status(500).json({ valid: false, message: 'Server error.' });
   }
 });
@@ -33,16 +40,13 @@ router.post('/validate-coupon', async (req, res) => {
 router.post('/signup', async (req, res) => {
   const { email, password, business_name, owner_name, phone, coupon_code } = req.body;
   try {
-    // Check if user exists
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'An account with this email already exists.' });
     }
 
-    // Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
-    // Handle coupon
     let trial_ends_at = new Date();
     trial_ends_at.setDate(trial_ends_at.getDate() + 14);
     let applied_coupon = null;
@@ -55,26 +59,19 @@ router.post('/signup', async (req, res) => {
       if (couponResult.rows.length > 0) {
         const coupon = couponResult.rows[0];
         if (!coupon.max_uses || coupon.current_uses < coupon.max_uses) {
-          // Add free months
           trial_ends_at = new Date();
           trial_ends_at.setMonth(trial_ends_at.getMonth() + coupon.free_months);
           applied_coupon = coupon_code.toUpperCase();
-
-          // Update coupon usage
           await pool.query(
             'UPDATE coupons SET current_uses = current_uses + 1 WHERE code = $1',
             [applied_coupon]
           );
-
-          // Deactivate if single use
           if (coupon.is_single_use) {
             await pool.query(
               'UPDATE coupons SET is_active = false WHERE code = $1',
               [applied_coupon]
             );
           }
-
-          // Deactivate if max uses reached
           if (coupon.max_uses && (coupon.current_uses + 1) >= coupon.max_uses) {
             await pool.query(
               'UPDATE coupons SET is_active = false WHERE code = $1',
@@ -85,7 +82,6 @@ router.post('/signup', async (req, res) => {
       }
     }
 
-    // Create user
     const newUser = await pool.query(
       `INSERT INTO users 
         (email, password_hash, business_name, owner_name, phone, coupon_code, trial_ends_at, plan)
@@ -95,8 +91,6 @@ router.post('/signup', async (req, res) => {
     );
 
     const user = newUser.rows[0];
-
-    // Create JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.SESSION_SECRET,
@@ -136,7 +130,6 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email or password.' });
     }
 
-    // Update last login
     await pool.query('UPDATE users SET last_login_at = NOW() WHERE id = $1', [user.id]);
 
     const token = jwt.sign(
