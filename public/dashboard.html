@@ -400,6 +400,108 @@ async function saveCustomer() {
     const data = await res.json();
     if (data.success) {
       closeAddCustomer();
+      // JOBS
+async function loadJobs(date) {
+  try {
+    const url = date ? `/api/jobs?date=${date}` : '/api/jobs';
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    renderJobs(data.jobs || []);
+  } catch (err) {
+    console.error('Load jobs error:', err);
+  }
+}
+
+function loadUpcoming() {
+  document.getElementById('scheduleDate').value = '';
+  loadJobs();
+}
+
+function renderJobs(jobs) {
+  const list = document.getElementById('jobsList');
+  if (!jobs || jobs.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">📅</div><h3>No jobs found</h3><p>Book a job to get started</p></div>`;
+    return;
+  }
+  list.innerHTML = jobs.map(j => `
+    <div class="job-item" style="padding:16px 20px;border-bottom:1px solid #f1f5f9;">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div>
+          <div class="job-type">${j.job_type || 'General Service'}</div>
+          <div class="job-date">👤 ${j.customer_name}</div>
+          <div class="job-date">📅 ${new Date(j.scheduled_date).toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric'})} at ${new Date(j.scheduled_date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>
+          ${j.notes ? `<div style="font-size:13px;color:#64748b;margin-top:4px;">${j.notes}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;">
+          <span class="job-status ${j.status === 'completed' ? 'status-paid' : j.status === 'cancelled' ? 'status-unpaid' : ''}" style="background:${j.status === 'scheduled' ? '#eff6ff' : ''};color:${j.status === 'scheduled' ? '#1a56db' : ''}">${j.status}</span>
+          <button class="btn-danger" onclick="cancelJob(${j.id})">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function cancelJob(id) {
+  if (!confirm('Cancel this job?')) return;
+  try {
+    await fetch(`/api/jobs/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    loadJobs();
+  } catch (err) {
+    console.error('Cancel job error:', err);
+  }
+}
+
+function openBookJob() {
+  loadCustomersForSelect();
+  document.getElementById('bookJobModal').classList.add('open');
+}
+
+function closeBookJob() {
+  document.getElementById('bookJobModal').classList.remove('open');
+}
+
+async function loadCustomersForSelect() {
+  try {
+    const res = await fetch('/api/customers', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    const select = document.getElementById('jobCustomer');
+    select.innerHTML = '<option value="">Select a customer...</option>' +
+      (data.customers || []).map(c => `<option value="${c.id}">${c.name} ${c.phone ? '· ' + c.phone : ''}</option>`).join('');
+  } catch (err) {
+    console.error('Load customers error:', err);
+  }
+}
+
+async function saveJob() {
+  const customer_id = document.getElementById('jobCustomer').value;
+  const job_type = document.getElementById('jobType').value.trim();
+  const date = document.getElementById('jobDate').value;
+  const time = document.getElementById('jobTime').value;
+  const notes = document.getElementById('jobNotes').value.trim();
+
+  if (!customer_id) { alert('Please select a customer.'); return; }
+  if (!date || !time) { alert('Please select a date and time.'); return; }
+
+  const scheduled_date = new Date(`${date}T${time}`).toISOString();
+
+  try {
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id, job_type, scheduled_date, notes })
+    });
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+    closeBookJob();
+    loadJobs();
+    alert('✅ Job booked! Confirmation SMS sent to customer.');
+  } catch (err) {
+    console.error('Save job error:', err);
+  }
+}
       loadCustomers();
     } else {
       alert(data.error || 'Error saving customer.');
