@@ -266,4 +266,133 @@ function showSection(name, btn) {
 
 function logout() {
   localStorage.removeItem('pipedesk_token');
-  localStorage.removeItem('
+  localStorage.removeItem('pipedesk_user');
+  window.location.href = '/';
+}
+
+// CUSTOMERS
+let searchTimeout;
+function searchCustomers(val) {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => loadCustomers(val), 300);
+}
+
+async function loadCustomers(search = '') {
+  try {
+    const url = search ? `/api/customers?search=${encodeURIComponent(search)}` : '/api/customers';
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    renderCustomers(data.customers || []);
+    document.getElementById('statCustomers').textContent = data.customers ? data.customers.length : 0;
+  } catch (err) {
+    console.error('Load customers error:', err);
+  }
+}
+
+function renderCustomers(customers) {
+  const list = document.getElementById('customerList');
+  if (customers.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">👥</div><h3>No customers found</h3><p>Add your first customer to get started</p></div>`;
+    return;
+  }
+  list.innerHTML = customers.map(c => `
+    <div class="customer-item" onclick="viewCustomer(${c.id})">
+      <div>
+        <div class="customer-name">${c.name}</div>
+        <div class="customer-meta">${c.phone || ''} ${c.address ? '· ' + c.address : ''}</div>
+      </div>
+      <div class="customer-jobs">${c.job_count || 0} jobs</div>
+    </div>
+  `).join('');
+}
+
+async function viewCustomer(id) {
+  try {
+    const res = await fetch(`/api/customers/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    const c = data.customer;
+    const jobs = data.jobs || [];
+
+    document.getElementById('customerDetailCard').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+        <h3>${c.name}</h3>
+        <button class="btn-danger" onclick="deleteCustomer(${c.id})">Delete</button>
+      </div>
+      ${c.phone ? `<div class="detail-row"><span class="detail-label">📞 Phone</span><span class="detail-value"><a href="tel:${c.phone}">${c.phone}</a></span></div>` : ''}
+      ${c.email ? `<div class="detail-row"><span class="detail-label">📧 Email</span><span class="detail-value">${c.email}</span></div>` : ''}
+      ${c.address ? `<div class="detail-row"><span class="detail-label">📍 Address</span><span class="detail-value">${c.address}</span></div>` : ''}
+      ${c.notes ? `<div class="detail-row"><span class="detail-label">📝 Notes</span><span class="detail-value">${c.notes}</span></div>` : ''}
+    `;
+
+    document.getElementById('jobHistoryCard').innerHTML = `
+      <h3>Job History (${jobs.length})</h3>
+      ${jobs.length === 0 ? '<div class="empty-state" style="padding:24px"><p>No jobs yet for this customer</p></div>' :
+        jobs.map(j => `
+          <div class="job-item">
+            <div class="job-type">${j.job_type || 'General Service'}</div>
+            <div class="job-date">${j.scheduled_date ? new Date(j.scheduled_date).toLocaleDateString() : 'No date set'}</div>
+            ${j.amount ? `<div class="job-amount">$${parseFloat(j.amount).toFixed(2)} <span class="job-status ${j.invoice_status === 'paid' ? 'status-paid' : 'status-unpaid'}">${j.invoice_status || 'no invoice'}</span></div>` : ''}
+            ${j.notes ? `<div style="font-size:13px;color:#64748b;margin-top:4px;">${j.notes}</div>` : ''}
+          </div>
+        `).join('')
+      }
+    `;
+
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-customer-detail').classList.add('active');
+  } catch (err) {
+    console.error('View customer error:', err);
+  }
+}
+
+async function deleteCustomer(id) {
+  if (!confirm('Delete this customer and all their job history?')) return;
+  try {
+    await fetch(`/api/customers/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    showSection('customers', document.getElementById('nav-customers'));
+  } catch (err) {
+    console.error('Delete error:', err);
+  }
+}
+
+function openAddCustomer() {
+  document.getElementById('addCustomerModal').classList.add('open');
+  document.getElementById('newName').focus();
+}
+
+function closeAddCustomer() {
+  document.getElementById('addCustomerModal').classList.remove('open');
+  ['newName','newPhone','newEmail','newAddress','newNotes'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function saveCustomer() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name) { alert('Please enter a customer name.'); return; }
+  try {
+    const res = await fetch('/api/customers', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        phone: document.getElementById('newPhone').value.trim(),
+        email: document.getElementById('newEmail').value.trim(),
+        address: document.getElementById('newAddress').value.trim(),
+        notes: document.getElementById('newNotes').value.trim()
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeAddCustomer();
+      loadCustomers();
+    } else {
+      alert(data.error || 'Error saving customer.');
+    }
+  } catch (err) {
+    console.error('Save customer error:', err);
+  }
+}
+
+loadCustomers();
+</script>
+</body>
+</html>
