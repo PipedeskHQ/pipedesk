@@ -184,10 +184,27 @@ textarea { height: 80px; resize: vertical; }
 
   <!-- SCHEDULE -->
   <div class="section" id="section-schedule">
-    <div class="coming-soon">
-      <div class="icon">📅</div>
-      <h3>Schedule — Coming Soon!</h3>
-      <p>Book jobs, view your calendar, and send automatic SMS reminders.</p>
+    <div class="page-header">
+      <h2>Schedule</h2>
+      <button class="btn-primary" onclick="openBookJob()">+ Book Job</button>
+    </div>
+
+    <!-- Date picker -->
+    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <label style="font-size:14px;font-weight:600;color:#374151;">View date:</label>
+        <input type="date" id="scheduleDate" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;" onchange="loadJobs(this.value)">
+        <button class="btn-secondary" onclick="loadUpcoming()">View Upcoming</button>
+      </div>
+    </div>
+
+    <!-- Jobs list -->
+    <div class="customer-list" id="jobsList">
+      <div class="empty-state">
+        <div class="icon">📅</div>
+        <h3>No jobs scheduled</h3>
+        <p>Book your first job to get started</p>
+      </div>
     </div>
   </div>
 
@@ -391,8 +408,142 @@ async function saveCustomer() {
     console.error('Save customer error:', err);
   }
 }
+// JOBS
+async function loadJobs(date) {
+  try {
+    const url = date ? `/api/jobs?date=${date}` : '/api/jobs';
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    renderJobs(data.jobs || []);
+  } catch (err) {
+    console.error('Load jobs error:', err);
+  }
+}
 
+function loadUpcoming() {
+  document.getElementById('scheduleDate').value = '';
+  loadJobs();
+}
+
+function renderJobs(jobs) {
+  const list = document.getElementById('jobsList');
+  if (!jobs || jobs.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">📅</div><h3>No jobs found</h3><p>Book a job to get started</p></div>`;
+    return;
+  }
+  list.innerHTML = jobs.map(j => `
+    <div class="job-item" style="padding:16px 20px;border-bottom:1px solid #f1f5f9;">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div>
+          <div class="job-type">${j.job_type || 'General Service'}</div>
+          <div class="job-date">👤 ${j.customer_name}</div>
+          <div class="job-date">📅 ${new Date(j.scheduled_date).toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric'})} at ${new Date(j.scheduled_date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>
+          ${j.notes ? `<div style="font-size:13px;color:#64748b;margin-top:4px;">${j.notes}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;">
+          <span class="job-status ${j.status === 'completed' ? 'status-paid' : j.status === 'cancelled' ? 'status-unpaid' : ''}" style="background:${j.status === 'scheduled' ? '#eff6ff' : ''};color:${j.status === 'scheduled' ? '#1a56db' : ''}">${j.status}</span>
+          <button class="btn-danger" onclick="cancelJob(${j.id})">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function cancelJob(id) {
+  if (!confirm('Cancel this job?')) return;
+  try {
+    await fetch(`/api/jobs/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    loadJobs();
+  } catch (err) {
+    console.error('Cancel job error:', err);
+  }
+}
+
+function openBookJob() {
+  loadCustomersForSelect();
+  document.getElementById('bookJobModal').classList.add('open');
+}
+
+function closeBookJob() {
+  document.getElementById('bookJobModal').classList.remove('open');
+}
+
+async function loadCustomersForSelect() {
+  try {
+    const res = await fetch('/api/customers', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    const select = document.getElementById('jobCustomer');
+    select.innerHTML = '<option value="">Select a customer...</option>' +
+      (data.customers || []).map(c => `<option value="${c.id}">${c.name} ${c.phone ? '· ' + c.phone : ''}</option>`).join('');
+  } catch (err) {
+    console.error('Load customers error:', err);
+  }
+}
+
+async function saveJob() {
+  const customer_id = document.getElementById('jobCustomer').value;
+  const job_type = document.getElementById('jobType').value.trim();
+  const date = document.getElementById('jobDate').value;
+  const time = document.getElementById('jobTime').value;
+  const notes = document.getElementById('jobNotes').value.trim();
+
+  if (!customer_id) { alert('Please select a customer.'); return; }
+  if (!date || !time) { alert('Please select a date and time.'); return; }
+
+  const scheduled_date = new Date(`${date}T${time}`).toISOString();
+
+  try {
+    const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id, job_type, scheduled_date, notes })
+    });
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+    closeBookJob();
+    loadJobs();
+    alert('✅ Job booked! Confirmation SMS sent to customer.');
+  } catch (err) {
+    console.error('Save job error:', err);
+  }
+}
 loadCustomers();
 </script>
+<!-- BOOK JOB MODAL -->
+<div class="modal-overlay" id="bookJobModal">
+  <div class="modal">
+    <h3>Book a Job</h3>
+    <div class="form-group">
+      <label>Customer *</label>
+      <select id="jobCustomer" style="width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none;">
+        <option value="">Select a customer...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Job Type</label>
+      <input type="text" id="jobType" placeholder="e.g. Water heater, Drain, Leak repair">
+    </div>
+    <div class="form-group">
+      <label>Date *</label>
+      <input type="date" id="jobDate">
+    </div>
+    <div class="form-group">
+      <label>Time *</label>
+      <input type="time" id="jobTime">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="jobNotes" placeholder="Any notes about the job..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeBookJob()">Cancel</button>
+      <button class="btn-primary" onclick="saveJob()">Book Job & Send SMS</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
