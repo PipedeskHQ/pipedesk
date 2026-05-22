@@ -177,6 +177,9 @@ const { authenticateToken } = require('./middleware/auth');
 const customerRoutes = require('./routes/customers');
 app.use('/api/customers', authenticateToken, customerRoutes);
 
+const jobRoutes = require('./routes/jobs');
+app.use('/api/jobs', authenticateToken, jobRoutes);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
