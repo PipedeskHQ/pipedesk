@@ -173,6 +173,10 @@ app.get('/files', (req, res) => {
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+const { authenticateToken } = require('./middleware/auth');
+const customerRoutes = require('./routes/customers');
+app.use('/api/customers', authenticateToken, customerRoutes);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
