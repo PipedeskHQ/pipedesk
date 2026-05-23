@@ -210,19 +210,60 @@ textarea { height: 80px; resize: vertical; }
 
   <!-- INVOICES -->
   <div class="section" id="section-invoices">
-    <div class="coming-soon">
-      <div class="icon">💳</div>
-      <h3>Invoices — Coming Soon!</h3>
-      <p>Create invoices and accept card payments right from your phone.</p>
+    <div class="page-header">
+      <h2>Invoices</h2>
+      <button class="btn-primary" onclick="openCreateInvoice()">+ Create Invoice</button>
+    </div>
+    <div class="customer-list" id="invoicesList">
+      <div class="empty-state">
+        <div class="icon">💳</div>
+        <h3>No invoices yet</h3>
+        <p>Create your first invoice to get paid</p>
+      </div>
     </div>
   </div>
 
   <!-- SETTINGS -->
   <div class="section" id="section-settings">
-    <div class="coming-soon">
-      <div class="icon">⚙️</div>
-      <h3>Settings — Coming Soon!</h3>
-      <p>Configure your business name, Twilio, Stripe, and Google review link.</p>
+    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;margin-bottom:16px;">
+      <h3 style="font-size:17px;font-weight:700;margin-bottom:16px;">💳 PipeDesk Subscription</h3>
+      <div id="billingStatus" style="font-size:14px;color:#64748b;margin-bottom:16px;">Loading...</div>
+      <button class="btn-primary" onclick="subscribe()" id="subscribeBtn" style="display:none;">Subscribe — $39/month</button>
+    </div>
+
+    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;margin-bottom:16px;">
+      <h3 style="font-size:17px;font-weight:700;margin-bottom:8px;">🔗 Connect Your Stripe Account</h3>
+      <p style="font-size:14px;color:#64748b;margin-bottom:16px;">Connect Stripe to accept card payments from your customers.</p>
+      <div id="stripeConnectStatus" style="font-size:14px;color:#64748b;margin-bottom:16px;">Loading...</div>
+      <button class="btn-primary" onclick="connectStripe()" id="connectStripeBtn">Connect Stripe Account</button>
+    </div>
+
+    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;margin-bottom:16px;">
+      <h3 style="font-size:17px;font-weight:700;margin-bottom:16px;">⭐ Google Review Link</h3>
+      <div class="form-group">
+        <label>Your Google Business Review Link</label>
+        <input type="url" id="googleReviewLink" placeholder="https://g.page/r/your-review-link">
+      </div>
+      <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+
+    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;">
+      <h3 style="font-size:17px;font-weight:700;margin-bottom:16px;">🔔 Automation Settings</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9;">
+        <div>
+          <div style="font-size:15px;font-weight:600;">6-Month Follow-Up Texts</div>
+          <div style="font-size:13px;color:#64748b;">Auto-text customers 6 months after their last job</div>
+        </div>
+        <input type="checkbox" id="followUpEnabled" style="width:20px;height:20px;cursor:pointer;">
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;">
+        <div>
+          <div style="font-size:15px;font-weight:600;">Google Review Requests</div>
+          <div style="font-size:13px;color:#64748b;">Auto-send review link when invoice is marked paid</div>
+        </div>
+        <input type="checkbox" id="reviewRequestsEnabled" style="width:20px;height:20px;cursor:pointer;">
+      </div>
+      <button class="btn-primary" onclick="saveSettings()" style="margin-top:12px;">Save Settings</button>
     </div>
   </div>
 
