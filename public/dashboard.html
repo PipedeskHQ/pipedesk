@@ -878,6 +878,30 @@ async function saveJob() {
 }
 loadCustomers();
 </script>
+  <!-- CREATE INVOICE MODAL -->
+<div class="modal-overlay" id="createInvoiceModal">
+  <div class="modal">
+    <h3>Create Invoice</h3>
+    <div class="form-group">
+      <label>Customer *</label>
+      <select id="invoiceCustomer" style="width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none;">
+        <option value="">Select a customer...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Description *</label>
+      <input type="text" id="invoiceDescription" placeholder="e.g. Water heater replacement">
+    </div>
+    <div class="form-group">
+      <label>Amount *</label>
+      <input type="number" id="invoiceAmount" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeCreateInvoice()">Cancel</button>
+      <button class="btn-primary" onclick="saveInvoice()">Create Invoice</button>
+    </div>
+  </div>
+</div>
 <!-- BOOK JOB MODAL -->
 <div class="modal-overlay" id="bookJobModal">
   <div class="modal">
