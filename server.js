@@ -193,6 +193,9 @@ app.use('/api/settings', authenticateToken, settingsRoutes);
 const { router: automationRouter, runFollowUps, runJobReminders } = require('./routes/automation');
 app.use('/api/automation', authenticateToken, automationRouter);
 
+const webhookRoutes = require('./routes/webhooks');
+app.use('/webhooks', webhookRoutes);
+
 // Scheduled daily automation
 const cron = require('node-cron');
 cron.schedule('0 8 * * *', async () => {
