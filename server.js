@@ -187,6 +187,9 @@ const billingRoutes = require('./routes/billing');
 app.use('/api/billing', authenticateToken, billingRoutes);
 app.use('/api/billing/webhook', billingRoutes);
 
+const settingsRoutes = require('./routes/settings');
+app.use('/api/settings', authenticateToken, settingsRoutes);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
