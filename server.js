@@ -190,6 +190,17 @@ app.use('/api/billing/webhook', billingRoutes);
 const settingsRoutes = require('./routes/settings');
 app.use('/api/settings', authenticateToken, settingsRoutes);
 
+const { router: automationRouter, runFollowUps, runJobReminders } = require('./routes/automation');
+app.use('/api/automation', authenticateToken, automationRouter);
+
+// Scheduled daily automation
+const cron = require('node-cron');
+cron.schedule('0 8 * * *', async () => {
+  console.log('Running daily automation...');
+  await runJobReminders();
+  await runFollowUps();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
