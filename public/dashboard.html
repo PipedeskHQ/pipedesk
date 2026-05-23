@@ -877,8 +877,225 @@ async function saveJob() {
   }
 }
 loadCustomers();
+
+// INVOICES
+async function loadInvoices() {
+  try {
+    const res = await fetch('/api/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    renderInvoices(data.invoices || []);
+  } catch (err) {
+    console.error('Load invoices error:', err);
+  }
+}
+
+function renderInvoices(invoices) {
+  const list = document.getElementById('invoicesList');
+  if (!invoices || invoices.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">💳</div><h3>No invoices yet</h3><p>Create your first invoice to get paid</p></div>`;
+    return;
+  }
+  list.innerHTML = invoices.map(inv => `
+    <div class="job-item" style="padding:16px 20px;border-bottom:1px solid #f1f5f9;">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div>
+          <div class="job-type">${inv.customer_name}</div>
+          <div class="job-date">${inv.description || 'No description'}</div>
+          <div class="job-date">${new Date(inv.created_at).toLocaleDateString()}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:18px;font-weight:700;color:#0f172a;">$${parseFloat(inv.amount).toFixed(2)}</div>
+          <span class="job-status ${inv.status === 'paid' ? 'status-paid' : 'status-unpaid'}">${inv.status}</span>
+          <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;">
+            ${inv.status === 'unpaid' ? `<button class="btn-primary" style="padding:6px 12px;font-size:12px;" onclick="sendInvoiceSMS(${inv.id})">Send SMS</button>` : ''}
+            ${inv.status === 'unpaid' ? `<button class="btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="markPaid(${inv.id})">Mark Paid</button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function sendInvoiceSMS(id) {
+  try {
+    const res = await fetch(`/api/invoices/${id}/send-sms`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Invoice sent via SMS!');
+    } else {
+      alert(data.error || 'Error sending SMS.');
+    }
+  } catch (err) {
+    console.error('Send SMS error:', err);
+  }
+}
+
+async function markPaid(id) {
+  if (!confirm('Mark this invoice as paid?')) return;
+  try {
+    const res = await fetch(`/api/invoices/${id}/mark-paid`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Invoice marked as paid!');
+      loadInvoices();
+    }
+  } catch (err) {
+    console.error('Mark paid error:', err);
+  }
+}
+
+function openCreateInvoice() {
+  loadCustomersForInvoice();
+  document.getElementById('createInvoiceModal').classList.add('open');
+}
+
+function closeCreateInvoice() {
+  document.getElementById('createInvoiceModal').classList.remove('open');
+}
+
+async function loadCustomersForInvoice() {
+  try {
+    const res = await fetch('/api/customers', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    const select = document.getElementById('invoiceCustomer');
+    select.innerHTML = '<option value="">Select a customer...</option>' +
+      (data.customers || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  } catch (err) {
+    console.error('Load customers error:', err);
+  }
+}
+
+async function saveInvoice() {
+  const customer_id = document.getElementById('invoiceCustomer').value;
+  const description = document.getElementById('invoiceDescription').value.trim();
+  const amount = parseFloat(document.getElementById('invoiceAmount').value);
+
+  if (!customer_id) { alert('Please select a customer.'); return; }
+  if (!description) { alert('Please enter a description.'); return; }
+  if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
+
+  try {
+    const res = await fetch('/api/invoices', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id, description, amount, line_items: [] })
+    });
+    const data = await res.json();
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
+    closeCreateInvoice();
+    loadInvoices();
+    alert('✅ Invoice created! Use "Send SMS" to send it to the customer.');
+  } catch (err) {
+    console.error('Save invoice error:', err);
+  }
+}
+
+// SETTINGS
+async function loadBillingStatus() {
+  try {
+    const res = await fetch('/api/billing/status', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    const statusEl = document.getElementById('billingStatus');
+    const subscribeBtn = document.getElementById('subscribeBtn');
+    if (data.plan === 'paid') {
+      statusEl.innerHTML = `✅ <strong>Active subscriber</strong> — Thank you!`;
+      subscribeBtn.style.display = 'none';
+    } else {
+      statusEl.innerHTML = `⏳ <strong>Free trial</strong> — ${data.days_left} days remaining`;
+      subscribeBtn.style.display = 'block';
+    }
+    const connectEl = document.getElementById('stripeConnectStatus');
+    const connectBtn = document.getElementById('connectStripeBtn');
+    if (data.stripe_connected) {
+      connectEl.innerHTML = `✅ <strong>Stripe connected</strong> — You can accept payments`;
+      connectBtn.textContent = 'Reconnect Stripe';
+    } else {
+      connectEl.innerHTML = `⚠️ Stripe not connected — customers can't pay you yet`;
+    }
+  } catch (err) {
+    console.error('Load billing error:', err);
+  }
+}
+
+async function subscribe() {
+  try {
+    const res = await fetch('/api/billing/subscribe', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert(data.error || 'Error starting subscription.');
+    }
+  } catch (err) {
+    console.error('Subscribe error:', err);
+  }
+}
+
+async function connectStripe() {
+  try {
+    const res = await fetch('/api/billing/connect-stripe', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert(data.error || 'Error connecting Stripe.');
+    }
+  } catch (err) {
+    console.error('Connect Stripe error:', err);
+  }
+}
+
+async function saveSettings() {
+  const google_review_link = document.getElementById('googleReviewLink').value.trim();
+  const follow_up_enabled = document.getElementById('followUpEnabled').checked;
+  const review_requests_enabled = document.getElementById('reviewRequestsEnabled').checked;
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ google_review_link, follow_up_enabled, review_requests_enabled })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Settings saved!');
+    } else {
+      alert(data.error || 'Error saving settings.');
+    }
+  } catch (err) {
+    console.error('Save settings error:', err);
+  }
+}
+
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings', { headers: { 'Authorization': `Bearer ${token}` } });
+    const data = await res.json();
+    if (data.settings) {
+      document.getElementById('googleReviewLink').value = data.settings.google_review_link || '';
+      document.getElementById('followUpEnabled').checked = data.settings.follow_up_enabled;
+      document.getElementById('reviewRequestsEnabled').checked = data.settings.review_requests_enabled;
+    }
+  } catch (err) {
+    console.error('Load settings error:', err);
+  }
+}
 </script>
-  <!-- CREATE INVOICE MODAL -->
+<!-- CREATE INVOICE MODAL -->
 <div class="modal-overlay" id="createInvoiceModal">
   <div class="modal">
     <h3>Create Invoice</h3>
