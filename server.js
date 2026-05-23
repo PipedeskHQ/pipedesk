@@ -180,6 +180,13 @@ app.use('/api/customers', authenticateToken, customerRoutes);
 const jobRoutes = require('./routes/jobs');
 app.use('/api/jobs', authenticateToken, jobRoutes);
 
+const invoiceRoutes = require('./routes/invoices');
+app.use('/api/invoices', authenticateToken, invoiceRoutes);
+
+const billingRoutes = require('./routes/billing');
+app.use('/api/billing', authenticateToken, billingRoutes);
+app.use('/api/billing/webhook', billingRoutes);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
