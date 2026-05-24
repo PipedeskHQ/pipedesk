@@ -201,6 +201,10 @@ app.use('/api/admin', adminRouter);
 
 app.get('/admin', (req, res) => sendFile(res, 'admin.html'));
 app.get('/admin.html', (req, res) => sendFile(res, 'admin.html'));
+app.get('/privacy', (req, res) => sendFile(res, 'privacy.html'));
+app.get('/privacy.html', (req, res) => sendFile(res, 'privacy.html'));
+app.get('/terms', (req, res) => sendFile(res, 'terms.html'));
+app.get('/terms.html', (req, res) => sendFile(res, 'terms.html'));
 
 // Scheduled daily automation
 const cron = require('node-cron');
