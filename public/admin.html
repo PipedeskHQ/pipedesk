@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PipeDesk Admin</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; min-height: 100vh; color: #fff; }
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+.login-card { background: #1e293b; border-radius: 16px; padding: 36px 28px; width: 100%; max-width: 400px; }
+.login-card h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+.login-card p { font-size: 14px; color: #94a3b8; margin-bottom: 24px; }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+input { width: 100%; padding: 12px 14px; background: #0f172a; border: 1.5px solid #334155; border-radius: 8px; font-size: 15px; color: #fff; outline: none; }
+input:focus { border-color: #1a56db; }
+.btn { width: 100%; background: #1a56db; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.btn:hover { background: #1648c0; }
+.error-msg { background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; padding: 12px; font-size: 14px; color: #fca5a5; margin-bottom: 16px; display: none; }
+
+/* DASHBOARD */
+.dashboard { display: none; }
+.topbar { background: #1e293b; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+.topbar h1 { font-size: 20px; font-weight: 800; color: #1a56db; }
+.topbar span { font-size: 13px; color: #94a3b8; }
+.logout-btn { background: none; border: 1px solid #334155; color: #94a3b8; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.nav { display: flex; gap: 4px; padding: 12px 24px; background: #1e293b; border-bottom: 1px solid #334155; overflow-x: auto; }
+.nav-btn { padding: 8px 16px; border-radius: 8px; border: none; background: none; font-size: 14px; font-weight: 500; color: #94a3b8; cursor: pointer; white-space: nowrap; }
+.nav-btn.active { background: #1e3a6e; color: #60a5fa; }
+.nav-btn:hover { background: #1e3a6e; }
+.content { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.section { display: none; }
+.section.active { display: block; }
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+@media(min-width:600px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+.stat-card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
+.stat-card .label { font-size: 12px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 32px; font-weight: 800; color: #fff; }
+.stat-card .value.green { color: #4ade80; }
+.stat-card .value.blue { color: #60a5fa; }
+.stat-card .value.yellow { color: #fbbf24; }
+.stat-card .value.red { color: #f87171; }
+.card { background: #1e293b; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; overflow: hidden; }
+.card-header { padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+.card-header h3 { font-size: 16px; font-weight: 700; }
+table { width: 100%; border-collapse: collapse; }
+th { padding: 12px 16px; text-align: left; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #334155; }
+td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+tr:hover td { background: #0f172a; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-paid { background: #14532d; color: #4ade80; }
+.badge-trial { background: #1e3a5f; color: #60a5fa; }
+.badge-cancelled { background: #450a0a; color: #f87171; }
+.badge-active { background: #14532d; color: #4ade80; }
+.badge-inactive { background: #450a0a; color: #f87171; }
+.badge-used { background: #422006; color: #fbbf24; }
+.action-btn { background: #1e3a6e; color: #60a5fa; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-right: 4px; }
+.action-btn:hover { background: #1a56db; color: #fff; }
+.action-btn.red { background: #450a0a; color: #f87171; }
+.action-btn.red:hover { background: #dc2626; color: #fff; }
+.mrr-bar { background: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 20px; margin-bottom: 20px; }
+.mrr-bar h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 80px; }
+.bar { flex: 1; background: #1a56db; border-radius: 4px 4px 0 0; min-width: 20px; position: relative; }
+.bar-label { font-size: 10px; color: #64748b; text-align: center; margin-top: 4px; }
+.coupon-form { display: flex; gap: 8px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid #334155; }
+.coupon-form input { flex: 1; min-width: 120px; padding: 10px 14px; background: #0f172a; border: 1.5px solid #334155; border-radius: 8px; font-size: 14px; color: #fff; outline: none; }
+.coupon-form input:focus { border-color: #1a56db; }
+.coupon-form button { background: #1a56db; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>🔧 PipeDesk Admin</h1>
+    <p>Founder dashboard — private access only</p>
+    <div class="error-msg" id="loginError"></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="adminEmail" placeholder="your@email.com">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="adminPassword" placeholder="Admin password">
+    </div>
+    <button class="btn" onclick="adminLogin()">Log In to Admin</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <h1>PipeDesk Admin</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="adminWelcome"></span>
+      <button class="logout-btn" onclick="adminLogout()">Log out</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" id="nav-overview" onclick="showSection('overview', this)">📊 Overview</button>
+    <button class="nav-btn" id="nav-users" onclick="showSection('users', this)">👥 Users</button>
+    <button class="nav-btn" id="nav-coupons" onclick="showSection('coupons', this)">🎟️ Coupons</button>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="section active" id="section-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Monthly Revenue</div>
+          <div class="value green" id="statMRR">$0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Paid Subscribers</div>
+          <div class="value blue" id="statPaid">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Free Trials</div>
+          <div class="value yellow" id="statTrial">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">New This Month</div>
+          <div class="value" id="statNew">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Total Users</div>
+          <div class="value" id="statTotal">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Cancelled</div>
+          <div class="value red" id="statCancelled">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Churn This Month</div>
+          <div class="value red" id="statChurn">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Annual Run Rate</div>
+          <div class="value green" id="statARR">$0</div>
+        </div>
+      </div>
+
+      <div class="mrr-bar">
+        <h3>MRR Trend (Last 6 Months)</h3>
+        <div class="bar-chart" id="mrrChart"></div>
+        <div style="display:flex;gap:8px;" id="mrrLabels"></div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="section" id="section-users">
+      <div class="card">
+        <div class="card-header">
+          <h3>All Users</h3>
+          <span id="userCount" style="font-size:14px;color:#64748b;"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Business</th>
+                <th>Plan</th>
+                <th>Coupon</th>
+                <th>Signed Up</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- COUPONS -->
+    <div class="section" id="section-coupons">
+      <div class="card">
+        <div class="card-header">
+          <h3>Coupon Codes</h3>
+        </div>
+        <div class="coupon-form">
+          <input type="text" id="newCode" placeholder="CODE (e.g. SUMMER25)" style="text-transform:uppercase;">
+          <input type="number" id="newMonths" placeholder="Free months" value="3" min="1" max="12">
+          <input type="number" id="newMaxUses" placeholder="Max uses (blank = unlimited)">
+          <label style="display:flex;align-items:center;gap:6px;color:#94a3b8;font-size:14px;">
+            <input type="checkbox" id="newSingleUse" style="width:16px;height:16px;"> Single use
+          </label>
+          <button onclick="createCoupon()">+ Create Code</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Free Months</th>
+                <th>Uses</th>
+                <th>Max Uses</th>
+                <th>Single Use</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="couponsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let adminToken = localStorage.getItem('pipedesk_admin_token');
+
+if (adminToken) {
+  showDashboard();
+}
+
+async function adminLogin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  const errorEl = document.getElementById('loginError');
+  errorEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.error) {
+      errorEl.textContent = data.error;
+      errorEl.style.display = 'block';
+      return;
+    }
+    localStorage.setItem('pipedesk_admin_token', data.token);
+    adminToken = data.token;
+    showDashboard();
+  } catch (err) {
+    errorEl.textContent = 'Connection error. Try again.';
+    errorEl.style.display = 'block';
+  }
+}
+
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadStats();
+  loadUsers();
+  loadCoupons();
+}
+
+function adminLogout() {
+  localStorage.removeItem('pipedesk_admin_token');
+  window.location.reload();
+}
+
+function showSection(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+async function loadStats() {
+  try {
+    const res = await fetch('/api/admin/stats', {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    document.getElementById('statMRR').textContent = `$${data.mrr}`;
+    document.getElementById('statARR').textContent = `$${data.mrr * 12}`;
+    document.getElementById('statPaid').textContent = data.paid_users;
+    document.getElementById('statTrial').textContent = data.trial_users;
+    document.getElementById('statNew').textContent = data.new_signups;
+    document.getElementById('statTotal').textContent = data.total_users;
+    document.getElementById('statCancelled').textContent = data.cancelled_users;
+    document.getElementById('statChurn').textContent = data.churn;
+
+    // MRR chart
+    if (data.mrr_history && data.mrr_history.length > 0) {
+      const max = Math.max(...data.mrr_history.map(m => m.mrr || 0), 1);
+      const chart = document.getElementById('mrrChart');
+      const labels = document.getElementById('mrrLabels');
+      chart.innerHTML = data.mrr_history.map(m => {
+        const height = Math.max(((m.mrr || 0) / max) * 80, 4);
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+          <div class="bar" style="height:${height}px;width:100%;"></div>
+        </div>`;
+      }).join('');
+      labels.innerHTML = data.mrr_history.map(m => {
+        const d = new Date(m.month);
+        return `<div style="flex:1;text-align:center;font-size:11px;color:#64748b;">${d.toLocaleDateString('en-US',{month:'short'})}</div>`;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('Load stats error:', err);
+  }
+}
+
+async function loadUsers() {
+  try {
+    const res = await fetch('/api/admin/users', {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    const users = data.users || [];
+    document.getElementById('userCount').textContent = `${users.length} total`;
+    document.getElementById('usersTable').innerHTML = users.map(u => `
+      <tr>
+        <td>${u.email}</td>
+        <td>${u.business_name || '—'}</td>
+        <td><span class="badge badge-${u.plan}">${u.plan}</span></td>
+        <td>${u.coupon_code || '—'}</td>
+        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+        <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : 'Never'}</td>
+        <td>
+          <button class="action-btn" onclick="extendTrial(${u.id})">+30 days</button>
+          <button class="action-btn red" onclick="cancelUser(${u.id})">Cancel</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Load users error:', err);
+  }
+}
+
+async function loadCoupons() {
+  try {
+    const res = await fetch('/api/admin/coupons', {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    const coupons = data.coupons || [];
+    document.getElementById('couponsTable').innerHTML = coupons.map(c => `
+      <tr>
+        <td style="font-weight:700;color:#fff;">${c.code}</td>
+        <td>${c.free_months} months</td>
+        <td>${c.current_uses}</td>
+        <td>${c.max_uses || '∞'}</td>
+        <td>${c.is_single_use ? 'Yes' : 'No'}</td>
+        <td><span class="badge ${c.is_active ? 'badge-active' : 'badge-inactive'}">${c.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td>${new Date(c.created_at).toLocaleDateString()}</td>
+        <td>
+          <button class="action-btn ${c.is_active ? 'red' : ''}" onclick="toggleCoupon(${c.id}, ${!c.is_active})">
+            ${c.is_active ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Load coupons error:', err);
+  }
+}
+
+async function extendTrial(id) {
+  if (!confirm('Add 30 days to this user\'s trial?')) return;
+  try {
+    const res = await fetch(`/api/admin/users/${id}/extend`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days: 30 })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Trial extended by 30 days!');
+      loadUsers();
+    }
+  } catch (err) {
+    console.error('Extend trial error:', err);
+  }
+}
+
+async function cancelUser(id) {
+  if (!confirm('Cancel this user\'s subscription?')) return;
+  try {
+    const res = await fetch(`/api/admin/users/${id}/cancel`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('✅ Subscription cancelled.');
+      loadUsers();
+    }
+  } catch (err) {
+    console.error('Cancel user error:', err);
+  }
+}
+
+async function toggleCoupon(id, is_active) {
+  try {
+    const res = await fetch(`/api/admin/coupons/${id}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active })
+    });
+    const data = await res.json();
+    if (data.success) loadCoupons();
+  } catch (err) {
+    console.error('Toggle coupon error:', err);
+  }
+}
+
+async function createCoupon() {
+  const code = document.getElementById('newCode').value.trim();
+  const free_months = parseInt(document.getElementById('newMonths').value);
+  const max_uses = document.getElementById('newMaxUses').value ? parseInt(document.getElementById('newMaxUses').value) : null;
+  const is_single_use = document.getElementById('newSingleUse').checked;
+
+  if (!code) { alert('Please enter a coupon code.'); return; }
+
+  try {
+    const res = await fetch('/api/admin/coupons', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, free_months, max_uses, is_single_use })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Coupon ${code} created!`);
+      document.getElementById('newCode').value = '';
+      loadCoupons();
+    } else {
+      alert(data.error || 'Error creating coupon.');
+    }
+  } catch (err) {
+    console.error('Create coupon error:', err);
+  }
+}
+
+document.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') adminLogin();
+});
+</script>
+</body>
+</html>
