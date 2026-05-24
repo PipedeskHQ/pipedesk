@@ -199,6 +199,9 @@ app.use('/webhooks', webhookRoutes);
 const { router: adminRouter } = require('./routes/admin');
 app.use('/api/admin', adminRouter);
 
+app.get('/admin', (req, res) => sendFile(res, 'admin.html'));
+app.get('/admin.html', (req, res) => sendFile(res, 'admin.html'));
+
 // Scheduled daily automation
 const cron = require('node-cron');
 cron.schedule('0 8 * * *', async () => {
