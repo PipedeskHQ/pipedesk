@@ -276,14 +276,21 @@ async function loadStats() {
       headers: { 'Authorization': `Bearer ${adminToken}` }
     });
     const data = await res.json();
-    document.getElementById('statMRR').textContent = `$${data.mrr}`;
-    document.getElementById('statARR').textContent = `$${data.mrr * 12}`;
-    document.getElementById('statPaid').textContent = data.paid_users;
-    document.getElementById('statTrial').textContent = data.trial_users;
-    document.getElementById('statNew').textContent = data.new_signups;
-    document.getElementById('statTotal').textContent = data.total_users;
-    document.getElementById('statCancelled').textContent = data.cancelled_users;
-    document.getElementById('statChurn').textContent = data.churn;
+    const mrr = parseInt(data.mrr) || 0;
+    const paid = parseInt(data.paid_users) || 0;
+    const trial = parseInt(data.trial_users) || 0;
+    const newS = parseInt(data.new_signups) || 0;
+    const total = parseInt(data.total_users) || 0;
+    const cancelled = parseInt(data.cancelled_users) || 0;
+    const churn = parseInt(data.churn) || 0;
+    document.getElementById('statMRR').textContent = `$${mrr}`;
+    document.getElementById('statARR').textContent = `$${mrr * 12}`;
+    document.getElementById('statPaid').textContent = paid;
+    document.getElementById('statTrial').textContent = trial;
+    document.getElementById('statNew').textContent = newS;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statCancelled').textContent = cancelled;
+    document.getElementById('statChurn').textContent = churn;
 
     // MRR chart
     if (data.mrr_history && data.mrr_history.length > 0) {
