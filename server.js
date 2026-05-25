@@ -145,7 +145,14 @@ app.get('/dashboard', (req, res) => sendFile(res, 'dashboard.html'));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'PipeDesk is running' });
 });
-
+app.get('/fix-stripe', async (req, res) => {
+  try {
+    await pool.query('UPDATE users SET stripe_customer_id = NULL, stripe_subscription_id = NULL');
+    res.json({ success: true, message: 'Stripe IDs cleared. Ready for live mode.' });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
 app.get('/db-test', async (req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*) FROM users');
